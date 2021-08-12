@@ -17,10 +17,10 @@ CS_FILE_IDS = 'es_CS_file_ids.json'
 # FORMATTED_FILE = 'es_MSV76.json'
 # FILE_NAME = 'es_RP.epub'
 # FORMATTED_FILE = 'es_RP.json'
-# FILE_NAME = 'es_CS.epub'
-# FORMATTED_FILE = 'es_CS.json'
-FILE_NAME = 'es_CT.epub'
-FORMATTED_FILE = 'es_CT.json'
+FILE_NAME = 'es_CS.epub'
+FORMATTED_FILE = 'es_CS.json'
+# FILE_NAME = 'es_CT.epub'
+# FORMATTED_FILE = 'es_CT.json'
 
 # completely ignored
 IGNORED_TAGS = ['html', 'head', 'body']
@@ -100,7 +100,7 @@ class EGWDevotionalEpubParser(HTMLParser):
                 self._append_data(VERSE, data)
             elif self.states[-1] == VERSE_REF:
                 if len(self.states) > 1 and self.states[-2] == PARAGRAPH:
-                    self.devotional['paragraphs'][str(self.paragraphs_count+1)] += (' ('+data+')')
+                    self.devotional['paragraphs'][self.paragraphs_count] += (' ('+data+')')
                 else:
                     self.devotional['verse'] += (' ('+data+')')
             elif self.states[-1] == PARAGRAPH:
@@ -111,28 +111,31 @@ class EGWDevotionalEpubParser(HTMLParser):
                 self._append_data(POEM_BR, data)
             # footnote reference in paragraph
             elif len(self.states) > 2 and self.states[-1] == WRITE_DATA and self.states[-2] == FOOTNOTE_REF and self.states[-3] == PARAGRAPH:
-                self.devotional['paragraphs'][str(self.paragraphs_count+1)] += ('('+data+') ')
+                self.devotional['paragraphs'][self.paragraphs_count] += ('('+data+') ')
             # paragraph with footnote reference
             elif len(self.states) > 2 and self.states[-1] == WRITE_DATA and self.states[-2] == FOOTNOTE_REF and self.states[-3] == FOOTNOTE:
                 self._append_data(FOOTNOTE, data)
             elif self.states[-1] == FOOTNOTE:
-                self.devotional['paragraphs'][str(self.paragraphs_count+1)] += data
+                self.devotional['paragraphs'][self.paragraphs_count] += data
             elif self.states[-1] == BOOK_REF_IBID:
-                self.devotional['paragraphs'][str(self.paragraphs_count+1)] += ('('+data+')')
+                self.devotional['paragraphs'][self.paragraphs_count] += ('('+data+')')
             elif self.states[-1] == BOOK_REF:
-                self.devotional['paragraphs'][str(self.paragraphs_count+1)] += (' '+data+' ')
+                self.devotional['paragraphs'][self.paragraphs_count] += (' '+data+' ')
             elif self.states[-1] == EGW_REF:
-                self.devotional['paragraphs'][str(self.paragraphs_count+1)] += (' ('+data+')')
+                self.devotional['paragraphs'][self.paragraphs_count] += (' ('+data+')')
             elif len(self.states) > 1 and self.states[-1] == WRITE_DATA and self.states[-2] == FOOTNOTE:
-                self.devotional['paragraphs'][str(self.paragraphs_count+1)] += data
+                self.devotional['paragraphs'][self.paragraphs_count] += data
             
                 
     def dumps(self):
         if self.devotional != {}:
             self.devotional['paragraphs_count'] = self.paragraphs_count
-            self.devotional['url'] = self._get_url(self.devotional['month'], self.devotional['day'])
-            self.devotional['audio_file_id'] = self._get_file_id(self.devotional['month'], self.devotional['day'])
-
+            self.devotional['urls'] = {
+                "YouTube" : self._get_url(self.devotional['month'], self.devotional['day'])
+            }
+            self.devotional['telegram_file_ids'] = {
+                "mp3" : self._get_file_id(self.devotional['month'], self.devotional['day'])
+            }
             return json.dumps(self.devotional, ensure_ascii=False, indent = 2, separators=(',', ': '))
         else:
             return ''
@@ -166,37 +169,37 @@ class EGWDevotionalEpubParser(HTMLParser):
                 self.devotional['verse'] += data
         elif state == PARAGRAPH:
             if not 'paragraphs' in self.devotional:
-                self.devotional['paragraphs'] = {}
-            if not str(self.paragraphs_count+1) in self.devotional['paragraphs']:
-                self.devotional['paragraphs'][str(self.paragraphs_count+1)] = data
+                self.devotional['paragraphs'] = []
+            if has_index(self.paragraphs_count, self.devotional['paragraphs']):
+                self.devotional['paragraphs'][self.paragraphs_count] += data
             else:
-                self.devotional['paragraphs'][str(self.paragraphs_count+1)] += data
+                self.devotional['paragraphs'].append(data)
         elif state == POEM:
             if not 'paragraphs' in self.devotional:
-                self.devotional['paragraphs'] = {}
-            if not str(self.paragraphs_count+1) in self.devotional['paragraphs']:
-                self.devotional['paragraphs'][str(self.paragraphs_count+1)] = data
+                self.devotional['paragraphs'] = []
+            if has_index(self.paragraphs_count, self.devotional['paragraphs']):
+                self.devotional['paragraphs'][self.paragraphs_count] += data
             else:
-                self.devotional['paragraphs'][str(self.paragraphs_count+1)] += data
+                self.devotional['paragraphs'].append(data)
         elif state == POEM_BR:
             if not 'paragraphs' in self.devotional:
-                self.devotional['paragraphs'] = {}
-            if not str(self.paragraphs_count+1) in self.devotional['paragraphs']:
-                self.devotional['paragraphs'][str(self.paragraphs_count+1)] = (data + '\n')
+                self.devotional['paragraphs'] = []
+            if has_index(self.paragraphs_count, self.devotional['paragraphs']):
+                self.devotional['paragraphs'][self.paragraphs_count] += (data + '\n')
             else:
-                self.devotional['paragraphs'][str(self.paragraphs_count+1)] += (data + '\n')
+                self.devotional['paragraphs'].append(data + '\n')
         elif state == FOOTNOTE:
-            if not str(self.paragraphs_count+1) in self.devotional['paragraphs']:
-                self.devotional['paragraphs'][str(self.paragraphs_count+1)] = ('('+data+') ')
+            if has_index(self.paragraphs_count, self.devotional['paragraphs']):
+                self.devotional['paragraphs'][self.paragraphs_count] += ('('+data+') ')
             else:
-                self.devotional['paragraphs'][str(self.paragraphs_count+1)] += ('('+data+') ')
+                self.devotional['paragraphs'].append('('+data+') ')
     
     def _get_url(self, month, day):
         links = {}
         with open(MARANATHA_URLS, 'rb') as fp:
             links = json.load(fp)
         for k, v in links.items():
-            if v['day'] == day and v['month'] == month:
+            if v['day'] == str(day) and v['month'] == str(month):
                 return v['url']
         return None
     
@@ -206,11 +209,13 @@ class EGWDevotionalEpubParser(HTMLParser):
         with open(MARANATHA_FILE_IDS, 'rb') as fp:
             file_ids = json.load(fp)
         for fid in file_ids:
-            if fid['day'] == day and fid['month'] == month:
+            if fid['day'] == str(day) and fid['month'] == str(month):
                 id_list.append(fid['file_id'])
         return id_list
 
-
+    
+def has_index(index, list):
+    return (0 <= index) and (index < len(list))
 
 
 
@@ -290,16 +295,16 @@ class EGWBookEpubParser(HTMLParser):
         data = self._handleable_data(data)
         if data != None:
             if self.states[-1] == TITLE:
-                self.chapter['chapter'] = data.split('—')[0]
-                self.chapter['title'] = data.split('—')[1]
+                self.chapter['chapter_number'] = int(data.split('—')[0].split(' ')[1])
+                self.chapter['chapter_title'] = data.split('—')[1]
             elif self.states[-1] == VERSE_REF:
                 if len(self.states) > 1 and self.states[-2] == PARAGRAPH:
-                    if self.chapter['paragraphs'][str(self.paragraphs_count+1)][-1] == '(':
-                        self.chapter['paragraphs'][str(self.paragraphs_count+1)] += data
+                    if self.chapter['paragraphs'][self.paragraphs_count][-1] == '(':
+                        self.chapter['paragraphs'][self.paragraphs_count] += data
                     else:
-                        self.chapter['paragraphs'][str(self.paragraphs_count+1)] += (' '+data)
+                        self.chapter['paragraphs'][self.paragraphs_count] += (' '+data)
                 else:
-                    self.chapter['paragraphs'][str(self.paragraphs_count+1)] += (' '+data)
+                    self.chapter['paragraphs'][self.paragraphs_count] += (' '+data)
             elif self.states[-1] == PARAGRAPH:
                 self._append_data(PARAGRAPH, data)
             elif self.states[-1] == POEM:
@@ -308,33 +313,36 @@ class EGWBookEpubParser(HTMLParser):
                 self._append_data(POEM_BR, data)
             # footnote reference in paragraph
             elif len(self.states) > 2 and self.states[-1] == WRITE_DATA and self.states[-2] == FOOTNOTE_REF and self.states[-3] == PARAGRAPH:
-                self.chapter['paragraphs'][str(self.paragraphs_count+1)] += ('('+data+') ')
+                self.chapter['paragraphs'][self.paragraphs_count] += ('('+data+') ')
             # paragraph with footnote reference
             elif len(self.states) > 2 and self.states[-1] == WRITE_DATA and self.states[-2] == FOOTNOTE_REF and self.states[-3] == FOOTNOTE:
                 self._append_data(FOOTNOTE, data)
             elif self.states[-1] == FOOTNOTE:
-                self.chapter['paragraphs'][str(self.paragraphs_count+1)] += data
+                self.chapter['paragraphs'][self.paragraphs_count] += data
             elif self.states[-1] == BOOK_REF_IBID:
-                self.chapter['paragraphs'][str(self.paragraphs_count+1)] += ('('+data+')')
+                self.chapter['paragraphs'][self.paragraphs_count] += ('('+data+')')
             elif self.states[-1] == BOOK_REF:
                 if 'paragraphs' not in self.chapter:
-                    self.chapter['paragraphs'] = {}
-                if str(self.paragraphs_count+1) in self.chapter['paragraphs']:
-                    self.chapter['paragraphs'][str(self.paragraphs_count+1)] += data
+                    self.chapter['paragraphs'] = []
+                if has_index(self.paragraphs_count, self.chapter['paragraphs']):
+                    self.chapter['paragraphs'][self.paragraphs_count] += data
                 else:
-                    self.chapter['paragraphs'][str(self.paragraphs_count+1)] = data
+                    self.chapter['paragraphs'].append(data)
             elif self.states[-1] == EGW_REF:
-                self.chapter['paragraphs'][str(self.paragraphs_count+1)] += (' ('+data+')')
+                self.chapter['paragraphs'][self.paragraphs_count] += (' ('+data+')')
             elif len(self.states) > 1 and self.states[-1] == WRITE_DATA and self.states[-2] == FOOTNOTE:
-                self.chapter['paragraphs'][str(self.paragraphs_count+1)] += data
+                self.chapter['paragraphs'][self.paragraphs_count] += data
             
                 
     def dumps(self):
         if self.chapter != {}:
             self.chapter['paragraphs_count'] = self.paragraphs_count
-            self.chapter['url'] = self._get_url(self.chapter['chapter'])
-            self.chapter['audio_file_id'] = self._get_file_id(self.chapter['chapter'])
-
+            self.chapter['urls'] = {
+                'YouTube' : self._get_url(self.chapter['chapter_number'])
+            }
+            self.chapter['telegram_file_ids'] = {
+                'mp3' : self._get_file_id(self.chapter['chapter_number'])
+            }
             return json.dumps(self.chapter, ensure_ascii=False, indent = 2, separators=(',', ': '))
         else:
             return ''
@@ -368,37 +376,37 @@ class EGWBookEpubParser(HTMLParser):
                 self.chapter['verse'] += data
         elif state == PARAGRAPH:
             if not 'paragraphs' in self.chapter:
-                self.chapter['paragraphs'] = {}
-            if not str(self.paragraphs_count+1) in self.chapter['paragraphs']:
-                self.chapter['paragraphs'][str(self.paragraphs_count+1)] = data
+                self.chapter['paragraphs'] = []
+            if has_index(self.paragraphs_count, self.chapter['paragraphs']):
+                self.chapter['paragraphs'][self.paragraphs_count] += data
             else:
-                self.chapter['paragraphs'][str(self.paragraphs_count+1)] += data
+                self.chapter['paragraphs'].append(data)
         elif state == POEM:
             if not 'paragraphs' in self.chapter:
-                self.chapter['paragraphs'] = {}
-            if not str(self.paragraphs_count+1) in self.chapter['paragraphs']:
-                self.chapter['paragraphs'][str(self.paragraphs_count+1)] = data
+                self.chapter['paragraphs'] = []
+            if has_index(self.paragraphs_count, self.chapter['paragraphs']):
+                self.chapter['paragraphs'][self.paragraphs_count] += data
             else:
-                self.chapter['paragraphs'][str(self.paragraphs_count+1)] += data
+                self.chapter['paragraphs'].append(data)
         elif state == POEM_BR:
             if not 'paragraphs' in self.chapter:
-                self.chapter['paragraphs'] = {}
-            if not str(self.paragraphs_count+1) in self.chapter['paragraphs']:
-                self.chapter['paragraphs'][str(self.paragraphs_count+1)] = (data + '\n')
+                self.chapter['paragraphs'] = []
+            if has_index(self.paragraphs_count, self.chapter['paragraphs']):
+                self.chapter['paragraphs'][self.paragraphs_count] += (data + '\n')
             else:
-                self.chapter['paragraphs'][str(self.paragraphs_count+1)] += (data + '\n')
+                self.chapter['paragraphs'].append(data + '\n')
         elif state == FOOTNOTE:
-            if not str(self.paragraphs_count+1) in self.chapter['paragraphs']:
-                self.chapter['paragraphs'][str(self.paragraphs_count+1)] = ('('+data+') ')
+            if has_index(self.paragraphs_count, self.chapter['paragraphs']):
+                self.chapter['paragraphs'][self.paragraphs_count] += ('('+data+') ')
             else:
-                self.chapter['paragraphs'][str(self.paragraphs_count+1)] += ('('+data+') ')
+                self.chapter['paragraphs'].append('('+data+') ')
     
     def _get_url(self, chapter):
         links = {}
         with open(CS_URLS, 'rb') as fp:
             links = json.load(fp)
         for k, v in links.items():
-            if v['chapter'] == chapter:
+            if v['chapter'] == f'Capítulo {chapter}':
                 return v['url']
         return None
     
@@ -408,7 +416,7 @@ class EGWBookEpubParser(HTMLParser):
         with open(CS_FILE_IDS, 'rb') as fp:
             file_ids = json.load(fp)
         for fid in file_ids:
-            if fid['chapter'] == chapter:
+            if fid['chapter'] == f'Capítulo {chapter}':
                 id_list.append(fid['file_id'])
         return id_list
 
@@ -471,7 +479,7 @@ def process_full_write():
 
     with open(FORMATTED_FILE, 'wb+') as f:
         # f.write('{\n')
-        jsonfile = {}
+        jsonfile = []
         idx = 1
         enum = 10
         for it in its[10:]:
@@ -479,7 +487,7 @@ def process_full_write():
             parser.feed(replace_entities(it.get_content()))
             towrite = parser.dumps()
             if towrite != '':
-                jsonfile[str(idx)] = parser.devotional
+                jsonfile.append(parser.devotional)
                 idx += 1
                 # f.write(towrite)
                 # print('i = ', idx+10-1)
@@ -494,7 +502,7 @@ def process_full_book_write():
 
     with open(FORMATTED_FILE, 'wb+') as f:
         # f.write('{\n')
-        jsonfile = {}
+        jsonfile = []
         idx = 1
         enum = 10
         for it in its[10:53]:
@@ -502,7 +510,7 @@ def process_full_book_write():
             parser.feed(replace_entities(it.get_content()))
             towrite = parser.dumps()
             if towrite != '':
-                jsonfile[str(idx)] = parser.chapter
+                jsonfile.append(parser.chapter)
                 idx += 1
                 # f.write(towrite)
                 # print('i = ', idx+10-1)
@@ -523,5 +531,5 @@ if __name__ == '__main__':
     # xray_item(53)
     # process_book_item_print(52)
     # process_item_print(52)
-    process_full_write()
-    # process_full_book_write()
+    # process_full_write()
+    process_full_book_write()
