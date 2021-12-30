@@ -13,12 +13,15 @@ MARANATHA_FILE_IDS = 'es_MSV76_file_ids.json'
 CS_URLS = 'es_CS_urls.json'
 CS_FILE_IDS = 'es_CS_file_ids.json'
 
+URLS = 'es_AFC_urls.json'
+FILE_IDS = 'es_AFC_file_ids.json'
+
 # FILE_NAME = 'es_MSV76.epub'
 # FORMATTED_FILE = 'es_MSV76.json'
 # FILE_NAME = 'es_RP.epub'
 # FORMATTED_FILE = 'es_RP.json'
-FILE_NAME = 'es_CS.epub'
-FORMATTED_FILE = 'es_CS.json'
+FILE_NAME = 'es_AFC.epub'
+FORMATTED_FILE = 'es_AFC.json'
 # FILE_NAME = 'es_CT.epub'
 # FORMATTED_FILE = 'es_CT.json'
 
@@ -49,6 +52,8 @@ class EGWDevotionalEpubParser(HTMLParser):
         elif tag == 'span' and sclass == 'bible-spa':
             self.states.append(VERSE_REF)
         elif tag == 'p' and sclass == 'standard-indented':
+            self.states.append(PARAGRAPH)
+        elif tag == 'p' and sclass == 'standard-noindent':
             self.states.append(PARAGRAPH)
         elif tag == 'p' and sclass == 'poem-noindent':
             self.states.append(POEM)
@@ -196,7 +201,7 @@ class EGWDevotionalEpubParser(HTMLParser):
     
     def _get_url(self, month, day):
         links = {}
-        with open(MARANATHA_URLS, 'rb') as fp:
+        with open(URLS, 'rb') as fp:
             links = json.load(fp)
         for k, v in links.items():
             if v['day'] == str(day) and v['month'] == str(month):
@@ -206,7 +211,7 @@ class EGWDevotionalEpubParser(HTMLParser):
     def _get_file_id(self, month, day):
         file_ids = {}
         id_list = []
-        with open(MARANATHA_FILE_IDS, 'rb') as fp:
+        with open(FILE_IDS, 'rb') as fp:
             file_ids = json.load(fp)
         for fid in file_ids:
             if fid['day'] == str(day) and fid['month'] == str(month):
@@ -482,7 +487,7 @@ def process_full_write():
         jsonfile = []
         idx = 1
         enum = 10
-        for it in its[10:]:
+        for it in its[enum:386]:
             parser = EGWDevotionalEpubParser({}, [], 0)
             parser.feed(replace_entities(it.get_content()))
             towrite = parser.dumps()
@@ -515,8 +520,8 @@ def process_full_book_write():
                 # f.write(towrite)
                 # print('i = ', idx+10-1)
                 # f.write(',\n')
-            enum += 1
             print(enum)
+            enum += 1
         f.write(json.dumps(jsonfile, ensure_ascii=False, indent = 2, separators=(',', ': ')).encode('utf-8'))
 
     # with open(FORMATTED_FILE, 'rb+') as filehandle:
@@ -528,8 +533,8 @@ def process_full_book_write():
 
 if __name__ == '__main__':
     # xray_doc()
-    # xray_item(53)
+    # xray_item(385)
     # process_book_item_print(52)
-    # process_item_print(52)
-    # process_full_write()
-    process_full_book_write()
+    # process_item_print(386)
+    process_full_write()
+    # process_full_book_write()
